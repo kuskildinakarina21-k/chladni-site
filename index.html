@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chladni Pattern</title>
+    <title>Chladni Pattern - Микрофон</title>
     <style>
         body {
             margin: 0;
@@ -22,12 +22,7 @@
             height: 80vh;
             pointer-events: none;
             position: relative;
-            
-            animation: 
-                spin 20s linear infinite,
-                pulse 0.4s ease-in-out infinite alternate;
-            
-            animation-duration: calc(20s / var(--speed, 1)), 0.4s;
+            animation: spin 20s linear infinite;
         }
 
         @keyframes spin {
@@ -35,49 +30,41 @@
             100% { transform: rotate(360deg); }
         }
 
-        @keyframes pulse {
-            0% { 
-                transform: scale(0.9); 
-                opacity: 0.8;
-            }
-            100% { 
-                transform: scale(calc(0.9 + (0.15 * var(--intensity, 1)))); 
-                opacity: calc(0.6 + (0.4 * var(--intensity, 1)));
-            }
+        .pattern-svg {
+            width: 100%;
+            height: 100%;
+            /* Начальный масштаб */
+            transform: scale(1); 
+            opacity: 0.9;
         }
 
-        .play-btn {
+        .start-btn {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
             padding: 20px 40px;
-            font-size: 24px;
-            background: rgba(255, 255, 255, 0.9);
+            font-size: 20px;
+            font-weight: bold;
+            background: rgba(255, 255, 255, 0.95);
             border: none;
             border-radius: 50px;
             cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
             z-index: 100;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
             transition: 0.2s;
         }
-        .play-btn:hover {
+        .start-btn:hover {
             background: white;
             transform: translate(-50%, -50%) scale(1.05);
-        }
-
-        .pattern-svg {
-            width: 100%;
-            height: 100%;
         }
     </style>
 </head>
 <body>
 
-    <!-- Контейнер с паттерном -->
     <div class="pattern-container" id="container">
-        <svg class="pattern-svg" viewBox="0 0 1131 1131" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <!-- ВСТАВЛЕН ТВОЙ ПАТТЕРН -->
+        <!-- Твой паттерн уже здесь. Не меняй. -->
+        <svg class="pattern-svg" id="patternSvg" viewBox="0 0 1131 1131" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M768.777 397.41C769.643 397.41 770.344 396.709 770.344 395.844C770.344 394.979 769.643 394.277 768.777 394.277C767.912 394.277 767.211 394.979 767.211 395.844C767.211 396.709 767.912 397.41 768.777 397.41Z" fill="white"/>
             <path d="M751.74 381.101C753.106 381.101 754.214 379.993 754.214 378.627C754.214 377.26 753.106 376.152 751.74 376.152C750.373 376.152 749.266 377.26 749.266 378.627C749.266 379.993 750.373 381.101 751.74 381.101Z" fill="white"/>
             <path d="M734.7 356.258C737.54 356.258 739.854 358.571 739.854 361.411C739.854 364.251 737.54 366.565 734.7 366.565C731.86 366.565 729.547 364.251 729.547 361.411C729.547 358.571 731.86 356.258 734.7 356.258Z" fill="white"/>
@@ -141,4 +128,5 @@
             <path d="M829.38 580.695C833.391 580.695 836.627 583.945 836.627 587.942C836.627 591.939 833.377 595.189 829.38 595.189C825.368 595.189 822.133 591.939 822.133 587.942C822.133 583.931 825.383 580.695 829.38 580.695Z" fill="white"/>
             <path d="M829.637 569.7C832.936 569.7 835.611 567.026 835.611 563.727C835.611 560.428 832.936 557.754 829.637 557.754C826.338 557.754 823.664 560.428 823.664 563.727C823.664 567.026 826.338 569.7 829.637 569.7Z" fill="white"/>
             <path d="M829.921 540.448C830.439 540.448 830.858 540.029 830.858 539.511C830.858 538.994 830.439 538.574 829.921 538.574C829.404 538.574 828.984 538.994 828.984 539.511C828.984 540.029 829.404 540.448 829.921 540.448Z" fill="white"/>
-            <path d="M825.406 512.
+            <path d="M825.406 512.719C827.134 512.719 828.54 514.124 828.54 515.852C828.54 517.579 827.134 518.985 825.406 518.985C823.679 518.985 822.273 517.579 822.273 515.852C822.273 514.124 823.679 512.719 825.406 512.719Z" fill="white"/>
+            <path d="M819.47 486.805C822.544 486
