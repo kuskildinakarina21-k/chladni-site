@@ -3,40 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Пульсирующий паттерн</title>
+    <title>3D Пульсирующий паттерн</title>
     <style>
         body {
             margin: 0;
             padding: 0;
-            background-color: #4a4a4a;
+            background-color: #3a3a3a; /* Темно-серый фон */
             height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            overflow: hidden;
+            overflow: hidden; /* Скрываем полосы прокрутки */
         }
 
-        .wrapper {
-            width: 80vh;
-            height: 80vh;
+        /* ВНЕШНЯЯ ОБЕРТКА. Она отвечает за то, чтобы паттерн выходил за экран */
+        .outer-wrapper {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            /* Размер паттерна в 1.5 раза больше экрана, чтобы он выходил за края */
+            width: 150vmax; 
+            height: 150vmax;
+            transform: translate(-50%, -50%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            
+            /* 3D ЭФФЕКТ: Перспектива делает изображение объемным при вращении */
+            perspective: 800px; 
+            
+            /* Плавная пульсация */
+            transition: transform 0.08s ease-out;
+        }
+
+        /* САМ ПАТТЕРН. Здесь происходит магия вращения, 3D и размытия */
+        .pattern-container {
+            width: 100%;
+            height: 100%;
             position: relative;
             display: flex;
             justify-content: center;
             align-items: center;
-            transition: transform 0.05s ease-out; /* Плавная пульсация */
-        }
-
-        .pattern-svg {
-            width: 100%;
-            height: 100%;
-            /* Вращение идет здесь */
-            animation: spin 15s linear infinite;
-            transform-origin: 50% 50%;
+            
+            /* 1. ВРАЩЕНИЕ (медленное, постоянное) */
+            animation: spin 25s linear infinite;
+            
+            /* 2. ЭФФЕКТ 3D: Легкий наклон по оси Y для иллюзии объема */
+            transform: rotateY(-15deg);
+            
+            /* 3. РАЗМЫТИЕ ПО КРАЯМ (Маскировка) */
+            /* Паттерн будет непрозрачным в центре и плавно исчезать к краям */
+            mask-image: radial-gradient(circle, rgba(0,0,0,1) 40%, rgba(0,0,0,0) 80%);
+            -webkit-mask-image: radial-gradient(circle, rgba(0,0,0,1) 40%, rgba(0,0,0,0) 80%);
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% { transform: rotateY(-15deg) rotate(0deg); }
+            100% { transform: rotateY(-15deg) rotate(360deg); }
+        }
+
+        /* Внутренний SVG, чтобы точно ничего не сломалось */
+        .pattern-svg {
+            width: 100%;
+            height: 100%;
         }
 
         .start-btn {
@@ -48,7 +77,7 @@
             border: none;
             border-radius: 50px;
             cursor: pointer;
-            z-index: 100;
+            z-index: 1000;
             box-shadow: 0 4px 20px rgba(0,0,0,0.5);
         }
         .start-btn:hover {
@@ -58,8 +87,12 @@
 </head>
 <body>
 
-    <div class="wrapper" id="wrapper">
-        <svg width="1131" height="1131" viewBox="0 0 1131 1131" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- Слой с паттерном -->
+    <div class="outer-wrapper" id="outerWrapper">
+        <div class="pattern-container" id="patternContainer">
+            <!-- Твой SVG паттерн -->
+            <svg class="pattern-svg" viewBox="0 0 1131 1131" fill="none" xmlns="http://www.w3.org/2000/svg">
+               <svg width="1131" height="1131" viewBox="0 0 1131 1131" fill="none" xmlns="http://www.w3.org/2000/svg">
 <path d="M768.777 397.41C769.643 397.41 770.344 396.709 770.344 395.844C770.344 394.979 769.643 394.277 768.777 394.277C767.912 394.277 767.211 394.979 767.211 395.844C767.211 396.709 767.912 397.41 768.777 397.41Z" fill="white"/>
 <path d="M751.74 381.101C753.106 381.101 754.214 379.993 754.214 378.627C754.214 377.26 753.106 376.152 751.74 376.152C750.373 376.152 749.266 377.26 749.266 378.627C749.266 379.993 750.373 381.101 751.74 381.101Z" fill="white"/>
 <path d="M734.7 356.258C737.54 356.258 739.854 358.571 739.854 361.411C739.854 364.251 737.54 366.565 734.7 366.565C731.86 366.565 729.547 364.251 729.547 361.411C729.547 358.571 731.86 356.258 734.7 356.258Z" fill="white"/>
@@ -718,21 +751,22 @@
 <path d="M570.934 528.398C571.928 528.398 572.734 527.592 572.734 526.598C572.734 525.603 571.928 524.797 570.934 524.797C569.939 524.797 569.133 525.603 569.133 526.598C569.133 527.592 569.939 528.398 570.934 528.398Z" fill="white"/>
 </svg>
 
-        </svg>
+            </svg>
+        </div>
 
-        <button class="start-btn" id="btn">Включить микрофон</button>
+        <button class="start-btn" id="btn">🎤 Слушать пространство</button>
     </div>
 
     <script>
-        const wrapper = document.getElementById('wrapper');
+        const outerWrapper = document.getElementById('outerWrapper');
         const btn = document.getElementById('btn');
 
         btn.addEventListener('click', async () => {
             try {
-                // 1. Запрашиваем микрофон
+                // Запрос микрофона
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 
-                // 2. Создаем аудио-контекст
+                // Настройка аудиоанализатора
                 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 const analyser = audioContext.createAnalyser();
                 const source = audioContext.createMediaStreamSource(stream);
@@ -741,25 +775,23 @@
                 analyser.fftSize = 256;
                 const dataArray = new Uint8Array(analyser.frequencyBinCount);
 
-                // Прячем кнопку
                 btn.style.display = 'none';
 
-                // 3. Цикл анимации
                 function update() {
                     analyser.getByteFrequencyData(dataArray);
 
-                    // Считаем общую громкость
                     let sum = 0;
                     for (let i = 0; i < dataArray.length; i++) {
                         sum += dataArray[i];
                     }
                     
-                    // Вычисляем множитель масштаба (от 0.9 до 1.4, в зависимости от громкости)
                     let volume = sum / (dataArray.length * 255);
-                    let scale = 0.9 + (volume * 0.5); // 0.9 - минимальный размер, 0.5 - сила пульсации
+                    
+                    // Сила пульсации: от 0.8 до 1.4
+                    let scale = 0.8 + (volume * 0.6);
 
-                    // Меняем размер обертки (вращение при этом не ломается!)
-                    wrapper.style.transform = `scale(${scale})`;
+                    // Масштабируем ВНЕШНЮЮ обертку. Вращение и 3D при этом НЕ ломаются.
+                    outerWrapper.style.transform = `translate(-50%, -50%) scale(${scale})`;
 
                     requestAnimationFrame(update);
                 }
@@ -767,7 +799,7 @@
                 update();
 
             } catch (err) {
-                alert("Ошибка: нужно разрешить доступ к микрофону!");
+                alert("Нужно разрешить доступ к микрофону!");
                 console.error(err);
             }
         });
