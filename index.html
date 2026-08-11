@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Анимированный паттерн под звук</title>
+    <title>Паттерн под звук</title>
     <style>
         body {
             margin: 0;
             padding: 0;
-            background-color: #4a4a4a; /* Цвет фона */
+            background-color: #4a4a4a;
             height: 100vh;
             display: flex;
             justify-content: center;
@@ -16,39 +16,32 @@
             overflow: hidden;
         }
 
-        /* Контейнер паттерна */
         .pattern-wrapper {
-            width: 80vh; /* Размер паттерна */
+            width: 80vh;
             height: 80vh;
             position: relative;
-            
-            /* ВРАЩЕНИЕ: медленное и постоянное */
-            animation: spin 20s linear infinite;
-            
-            /* ПУЛЬСАЦИЯ: будет меняться через JS */
-            transform: scale(1);
-            transition: transform 0.05s ease-out; /* Плавная реакция */
-        }
-
-        /* Вращение по кругу */
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
         }
 
         .pattern-svg {
             width: 100%;
             height: 100%;
+            /* Вращение делает сам SVG, а масштаб делает внешний блок */
+            animation: spin 20s linear infinite;
+            transform-origin: 50% 50%; /* Вращаем строго из центра */
         }
 
-        /* Кнопка запуска микрофона */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
         .start-btn {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            padding: 25px 50px;
-            font-size: 24px;
+            padding: 20px 40px;
+            font-size: 20px;
             font-weight: bold;
             background: rgba(255, 255, 255, 0.95);
             border: none;
@@ -65,7 +58,7 @@
 <body>
 
     <div class="pattern-wrapper" id="container">
-        <svg class="pattern-svg" viewBox="0 0 1131 1131" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <svg class="pattern-svg" id="patternSvg" viewBox="0 0 1131 1131" fill="none" xmlns="http://www.w3.org/2000/svg">
             <svg width="1131" height="1131" viewBox="0 0 1131 1131" fill="none" xmlns="http://www.w3.org/2000/svg">
 <path d="M768.777 397.41C769.643 397.41 770.344 396.709 770.344 395.844C770.344 394.979 769.643 394.277 768.777 394.277C767.912 394.277 767.211 394.979 767.211 395.844C767.211 396.709 767.912 397.41 768.777 397.41Z" fill="white"/>
 <path d="M751.74 381.101C753.106 381.101 754.214 379.993 754.214 378.627C754.214 377.26 753.106 376.152 751.74 376.152C750.373 376.152 749.266 377.26 749.266 378.627C749.266 379.993 750.373 381.101 751.74 381.101Z" fill="white"/>
@@ -723,9 +716,9 @@
 <path d="M590.344 536.142C591.816 536.142 593.009 534.949 593.009 533.477C593.009 532.005 591.816 530.812 590.344 530.812C588.873 530.812 587.68 532.005 587.68 533.477C587.68 534.949 588.873 536.142 590.344 536.142Z" fill="white"/>
 <path d="M579.134 527.195C579.632 527.195 580.042 527.605 580.042 528.103C580.042 528.601 579.632 529.011 579.134 529.011C578.636 529.011 578.227 528.601 578.227 528.103C578.227 527.605 578.636 527.195 579.134 527.195Z" fill="white"/>
 <path d="M570.934 528.398C571.928 528.398 572.734 527.592 572.734 526.598C572.734 525.603 571.928 524.797 570.934 524.797C569.939 524.797 569.133 525.603 569.133 526.598C569.133 527.592 569.939 528.398 570.934 528.398Z" fill="white"/>
-        </svg>
+</svg>
 
-        <button class="start-btn" id="startBtn">Начать слушать</button>
+        <button class="start-btn" id="startBtn">Включить звук</button>
     </div>
 
     <script>
@@ -734,7 +727,7 @@
 
         btn.addEventListener('click', async () => {
             try {
-                // 1. Просим доступ к микрофону
+                // 1. Запрашиваем микрофон
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 const audioContext = new AudioContext();
                 const source = audioContext.createMediaStreamSource(stream);
@@ -747,24 +740,22 @@
                 // Прячем кнопку
                 btn.style.display = 'none';
 
-                // 2. Запускаем бесконечное чтение звука
+                // 2. Бесконечный цикл прослушивания
                 function animate() {
                     analyser.getByteFrequencyData(dataArray);
 
-                    // Считаем общую громкость (суммируем все частоты)
                     let sum = 0;
                     for (let i = 0; i < dataArray.length; i++) {
                         sum += dataArray[i];
                     }
                     
-                    // Переводим в масштаб от 0 до 1
+                    // Средняя громкость (от 0 до 1)
                     let avgVolume = sum / (dataArray.length * 255);
                     
-                    // Если тихо, делаем паттерн маленьким, если громко - большим
-                    // 0.9 = базовый размер, + 0.4 = максимальное увеличение
+                    // Настраиваем масштаб (пульсацию). Чем громче, тем паттерн больше.
                     let scale = 0.9 + (avgVolume * 0.4);
 
-                    // Применяем масштаб к паттерну (ВРАЩЕНИЕ сохраняется!)
+                    // МАСШТАБИРУЕМ КОНТЕЙНЕР. ВРАЩЕНИЕ НЕ СЛОМАЕТСЯ!
                     container.style.transform = `scale(${scale})`;
 
                     requestAnimationFrame(animate);
