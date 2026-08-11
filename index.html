@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Паттерн под звук</title>
+    <title>Пульсирующий паттерн</title>
     <style>
         body {
             margin: 0;
             padding: 0;
-            background-color: #000000;
+            background-color: #4a4a4a;
             height: 100vh;
             display: flex;
             justify-content: center;
@@ -16,18 +16,22 @@
             overflow: hidden;
         }
 
-        .pattern-wrapper {
+        .wrapper {
             width: 80vh;
             height: 80vh;
             position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: transform 0.05s ease-out; /* Плавная пульсация */
         }
 
         .pattern-svg {
             width: 100%;
             height: 100%;
-            /* Вращение делает сам SVG, а масштаб делает внешний блок */
-            animation: spin 20s linear infinite;
-            transform-origin: 50% 50%; /* Вращаем строго из центра */
+            /* Вращение идет здесь */
+            animation: spin 15s linear infinite;
+            transform-origin: 50% 50%;
         }
 
         @keyframes spin {
@@ -37,9 +41,6 @@
 
         .start-btn {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
             padding: 20px 40px;
             font-size: 20px;
             font-weight: bold;
@@ -57,9 +58,8 @@
 </head>
 <body>
 
-    <div class="pattern-wrapper" id="container">
-        <svg class="pattern-svg" id="patternSvg" viewBox="0 0 1131 1131" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <svg width="1131" height="1131" viewBox="0 0 1131 1131" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <div class="wrapper" id="wrapper">
+        <svg width="1131" height="1131" viewBox="0 0 1131 1131" fill="none" xmlns="http://www.w3.org/2000/svg">
 <path d="M768.777 397.41C769.643 397.41 770.344 396.709 770.344 395.844C770.344 394.979 769.643 394.277 768.777 394.277C767.912 394.277 767.211 394.979 767.211 395.844C767.211 396.709 767.912 397.41 768.777 397.41Z" fill="white"/>
 <path d="M751.74 381.101C753.106 381.101 754.214 379.993 754.214 378.627C754.214 377.26 753.106 376.152 751.74 376.152C750.373 376.152 749.266 377.26 749.266 378.627C749.266 379.993 750.373 381.101 751.74 381.101Z" fill="white"/>
 <path d="M734.7 356.258C737.54 356.258 739.854 358.571 739.854 361.411C739.854 364.251 737.54 366.565 734.7 366.565C731.86 366.565 729.547 364.251 729.547 361.411C729.547 358.571 731.86 356.258 734.7 356.258Z" fill="white"/>
@@ -718,20 +718,24 @@
 <path d="M570.934 528.398C571.928 528.398 572.734 527.592 572.734 526.598C572.734 525.603 571.928 524.797 570.934 524.797C569.939 524.797 569.133 525.603 569.133 526.598C569.133 527.592 569.939 528.398 570.934 528.398Z" fill="white"/>
 </svg>
 
-        <button class="start-btn" id="startBtn">Включить звук</button>
+        </svg>
+
+        <button class="start-btn" id="btn">Включить микрофон</button>
     </div>
 
     <script>
-        const container = document.getElementById('container');
-        const btn = document.getElementById('startBtn');
+        const wrapper = document.getElementById('wrapper');
+        const btn = document.getElementById('btn');
 
         btn.addEventListener('click', async () => {
             try {
                 // 1. Запрашиваем микрофон
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                const audioContext = new AudioContext();
-                const source = audioContext.createMediaStreamSource(stream);
+                
+                // 2. Создаем аудио-контекст
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 const analyser = audioContext.createAnalyser();
+                const source = audioContext.createMediaStreamSource(stream);
                 source.connect(analyser);
 
                 analyser.fftSize = 256;
@@ -740,31 +744,30 @@
                 // Прячем кнопку
                 btn.style.display = 'none';
 
-                // 2. Бесконечный цикл прослушивания
-                function animate() {
+                // 3. Цикл анимации
+                function update() {
                     analyser.getByteFrequencyData(dataArray);
 
+                    // Считаем общую громкость
                     let sum = 0;
                     for (let i = 0; i < dataArray.length; i++) {
                         sum += dataArray[i];
                     }
                     
-                    // Средняя громкость (от 0 до 1)
-                    let avgVolume = sum / (dataArray.length * 255);
-                    
-                    // Настраиваем масштаб (пульсацию). Чем громче, тем паттерн больше.
-                    let scale = 0.9 + (avgVolume * 0.4);
+                    // Вычисляем множитель масштаба (от 0.9 до 1.4, в зависимости от громкости)
+                    let volume = sum / (dataArray.length * 255);
+                    let scale = 0.9 + (volume * 0.5); // 0.9 - минимальный размер, 0.5 - сила пульсации
 
-                    // МАСШТАБИРУЕМ КОНТЕЙНЕР. ВРАЩЕНИЕ НЕ СЛОМАЕТСЯ!
-                    container.style.transform = `scale(${scale})`;
+                    // Меняем размер обертки (вращение при этом не ломается!)
+                    wrapper.style.transform = `scale(${scale})`;
 
-                    requestAnimationFrame(animate);
+                    requestAnimationFrame(update);
                 }
 
-                animate();
+                update();
 
             } catch (err) {
-                alert("Нужно разрешить доступ к микрофону!");
+                alert("Ошибка: нужно разрешить доступ к микрофону!");
                 console.error(err);
             }
         });
