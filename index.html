@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Фигуры Хладни</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #0a0a0a;
+            overflow: hidden;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+        }
+        
+        .branding {
+            position: fixed;
+            z-index: 10;
+            color: white;
+            pointer-events: none;
+        }
+        
+        .logo {
+            top: 30px;
+            left: 30px;
+            font-size: 28px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            opacity: 0.8;
+        }
+        
+        .subtitle {
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 14px;
+            opacity: 0.4;
+            text-align: center;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+        
+        #start-btn {
+            position: fixed;
+            z-index: 20;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px 50px;
+            font-size: 18px;
+            background: rgba(255, 255, 255, 0.95);
+            color: #000;
+            border: none;
+            border-radius: 60px;
+            cursor: pointer;
+            font-weight: bold;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+        
+        #start-btn:hover {
+            transform: translate(-50%, -50%) scale(1.05);
+            background: #ffffff;
+        }
+        
+        #start-btn.hidden {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+
+        /* Адаптация для мобильных */
+        @media (max-width: 600px) {
+            .logo { font-size: 18px; top: 20px; left: 20px; }
+            .subtitle { font-size: 10px; bottom: 20px; }
+            #start-btn { padding: 15px 30px; font-size: 16px; }
+        }
+    </style>
+</head>
+<body>
+
+    <button id="start-btn">🎵 Активировать звук</button>
+
+    <div id="canvas-container"></div>
+
+    <div class="branding logo">НАЗВАНИЕ БРЕНДА</div>
+    <div class="branding subtitle">Аудио-реактивные фигуры Хладни</div>
+
+    <!-- Подключаем Three.js -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        // --- НАСТРОЙКА СЦЕНЫ ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0a0a0a);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(2, 1.5, 4);
+        camera.lookAt(0, 0, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        container.appendChild(renderer.domElement);
+
+        // --- СВЕТ ---
+        const ambientLight = new THREE.AmbientLight(0x222244, 0.5);
+        scene.add(ambientLight);
+
+        const light1 = new THREE.PointLight(0x4488ff, 1.5, 10);
+        light1.position.set(2, 3, 2);
+        scene.add(light1);
+
+        const light2 = new THREE.PointLight(0xff4488, 0.8, 10);
+        light2.position.set(-2, 1, -2);
+        scene.add(light2);
+
+        const light3 = new THREE.DirectionalLight(0xffffff, 0.5);
+        light3.position.set(0, 5, 0);
+        scene.add(light3);
+
+        // --- СОЗДАНИЕ ПЛАСТИНЫ (ФИГУРЫ ХЛАДНИ) ---
+        const width = 3.5;
+        const height = 3.5;
+        const segments = 80;
+
+        const geometry = new THREE.PlaneGeometry(width, height, segments, segments);
+        const material = new THREE.MeshStandardMaterial({
+            color: 0x4a8fe7,
+            roughness: 0.2,
+            metalness: 0.8,
+            side: THREE.DoubleSide,
+            wireframe: false,
+            emissive: 0x112244,
+            emissiveIntensity: 0.2,
+        });
+
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.rotation.x = -0.4;
+        mesh.rotation.y = 0.2;
+        mesh.position.y = 0;
+        scene.add(mesh);
+
+        // Сохраняем исходные позиции вершин
+        const positionAttribute = geometry.attributes.position;
+        const vertexCount = positionAttribute.count;
+        const originalPositions = new Float32Array(vertexCount * 3);
+        originalPositions.set(positionAttribute.array);
+
+        // --- НАСТРОЙКА ЗВУКА ---
+        let audioContext;
+        let analyser;
+        let dataArray;
+        let isAudioInitialized = false;
+        let audioData = null;
+
+        async function initAudio() {
+            if (isAudioInitialized) return;
+
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+                const bufferLength = analyser.frequencyBinCount;
+                dataArray = new Uint8Array(bufferLength);
+
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: { 
+                        echoCancellation: false,
+                        noiseSuppression: false,
+                        autoGainControl: false
+                    } 
+                });
+
+                const source = audioContext.createMediaStreamSource(stream);
+                source.connect(analyser);
+
+                await audioContext.resume();
+                isAudioInitialized = true;
+
+                document.getElementById('start-btn').classList.add('hidden');
+                console.log('Звук активирован!');
+
+            } catch (error) {
+                console.error('Ошибка доступа к микрофону:', error);
+                alert('Не удалось получить доступ к микрофону. Разрешите доступ в настройках браузера.');
+            }
+        }
+
+        document.getElementById('start-btn').addEventListener('click', initAudio);
+
+        // --- ПАРАМЕТРЫ ---
+        let time = 0;
+
+        // --- ФУНКЦИЯ ОБНОВЛЕНИЯ ФИГУРЫ ---
+        function updateChladni(time, audioData) {
+            const positions = geometry.attributes.position.array;
+
+            // Получаем громкость
+            let volume = 0;
+            if (audioData && audioData.length > 0) {
+                let sum = 0;
+                for (let i = 0; i < audioData.length; i++) {
+                    sum += audioData[i];
+                }
+                volume = sum / audioData.length / 128;
+                volume = Math.min(volume, 1);
+            }
+
+            // Амплитуда зависит от громкости
+            const amplitude = 0.15 + volume * 0.7;
+
+            // Частоты узора
+            const baseFreqX = 3 + Math.sin(time * 0.2) * 0.5;
+            const baseFreqY = 2.5 + Math.cos(time * 0.25) * 0.5;
+            const freqX = baseFreqX + volume * 3;
+            const freqY = baseFreqY + volume * 2;
+
+            for (let i = 0; i < positions.length / 3; i++) {
+                const i3 = i * 3;
+                
+                const origX = originalPositions[i3];
+                const origY = originalPositions[i3 + 1];
+                const origZ = originalPositions[i3 + 2];
+
+                // Классическая формула фигур Хладни
+                const chladni = Math.sin(origX * Math.PI * freqX) * 
+                                Math.sin(origY * Math.PI * freqY) * 
+                                amplitude;
+
+                positions[i3] = origX;
+                positions[i3 + 1] = origY;
+                positions[i3 + 2] = origZ + chladni;
+            }
+
+            geometry.attributes.position.needsUpdate = true;
+            geometry.computeVertexNormals();
+        }
+
+        // --- АНИМАЦИЯ ---
+        function animate() {
+            requestAnimationFrame(animate);
+
+            time += 0.01;
+
+            if (isAudioInitialized && analyser) {
+                analyser.getByteFrequencyData(dataArray);
+                audioData = dataArray;
+            }
+
+            updateChladni(time, audioData);
+
+            // Вращаем и наклоняем
+            mesh.rotation.y += 0.003;
+            mesh.rotation.x = -0.4 + Math.sin(time * 0.15) * 0.05;
+
+            // Меняем цвет от громкости
+            if (audioData && isAudioInitialized) {
+                const volume = audioData.reduce((a, b) => a + b, 0) / audioData.length / 128;
+                const hue = 0.55 + volume * 0.25;
+                const color = new THREE.Color().setHSL(hue, 0.7, 0.4 + volume * 0.3);
+                mesh.material.color.set(color);
+                
+                const emissiveColor = new THREE.Color().setHSL(hue, 0.8, 0.1 + volume * 0.2);
+                mesh.material.emissive.set(emissiveColor);
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        // --- РЕЗАЙЗ ---
+        window.addEventListener('resize', () => {
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+            renderer.setSize(w, h);
+        });
+
+        console.log('Сайт с фигурами Хладни загружен!');
+    </script>
+</body>
+</html>
